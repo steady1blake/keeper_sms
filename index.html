@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>키퍼 CCTV 문자 템플릿</title>
+<style>
+  :root{
+    --bg:#0E1720;
+    --panel:#151F2B;
+    --panel2:#1B2733;
+    --line:#26333F;
+    --text:#EDEFF2;
+    --sub:#8FA0AD;
+    --amber:#E8A33D;
+    --teal:#3FA79A;
+    --mono: 'SFMono-Regular', Consolas, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{padding:16px 14px 60px;max-width:640px;margin:0 auto;}
+
+  .header{padding:18px 4px 20px;border-bottom:1px solid var(--line);margin-bottom:16px;position:relative;}
+  .header .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--amber);text-transform:uppercase;}
+  .header h1{font-size:20px;margin:6px 0 2px;font-weight:700;}
+  .header .rec{position:absolute;top:18px;right:4px;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--sub);}
+  .dot{width:6px;height:6px;border-radius:50%;background:#E5484D;animation:blink 1.6s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:14px;-webkit-overflow-scrolling:touch;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex:none;font-family:var(--mono);font-size:12px;padding:8px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--sub);white-space:nowrap;cursor:pointer;}
+  .tab.active{background:var(--amber);color:#1A1206;border-color:var(--amber);font-weight:700;}
+
+  .staff-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .staff-label{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:.06em;}
+  .staff-tabs{display:flex;gap:6px;}
+  .staff-tab{font-family:var(--sans);font-size:13px;font-weight:700;padding:7px 16px;border-radius:20px;background:var(--panel);border:1px solid var(--teal);color:var(--teal);cursor:pointer;}
+  .staff-tab.active{background:var(--teal);color:#0E1720;}
+
+  .section{display:none;}
+  .section.active{display:block;}
+
+  .calc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .calc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .calc-label{font-size:13px;color:var(--sub);}
+  .stepper{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:10px;padding:4px;border:1px solid var(--line);}
+  .stepper button{width:32px;height:32px;border-radius:8px;border:none;background:var(--panel);color:var(--amber);font-size:18px;font-weight:700;cursor:pointer;}
+  .stepper button.link-toggle{color:var(--sub);font-weight:600;}
+  .stepper button.link-toggle.active{background:var(--amber);color:#1A1206;}
+  .stepper input{width:40px;text-align:center;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:16px;font-weight:700;}
+  .readout{font-family:var(--mono);border-top:1px dashed var(--line);padding-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .readout div span.k{display:block;font-size:10px;color:var(--sub);letter-spacing:.06em;}
+  .readout div span.v{display:block;font-size:15px;color:var(--teal);font-weight:700;margin-top:2px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;}
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);}
+  .card-title{font-size:13px;font-weight:700;color:var(--text);}
+  .card-title .tag{font-family:var(--mono);font-size:10px;color:var(--amber);display:block;letter-spacing:.08em;margin-bottom:2px;}
+  .copy-btn{font-family:var(--mono);font-size:12px;padding:7px 12px;border-radius:7px;border:1px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer;white-space:nowrap;}
+  .copy-btn.copied{background:var(--teal);color:#0E1720;border-color:var(--teal);}
+  .card-body{padding:12px 14px;font-size:12.5px;line-height:1.6;color:var(--sub);white-space:pre-wrap;max-height:120px;overflow-y:auto;}
+
+  .note{font-size:11px;color:var(--sub);text-align:center;margin-top:20px;line-height:1.6;}
+
+  /* 정식 견적서 (원본 이미지 + canvas 오버레이) */
+  .pdf-btn{width:100%;margin-top:14px;padding:13px;border-radius:10px;border:none;background:var(--amber);color:#1A1206;font-weight:800;font-size:14px;font-family:var(--sans);cursor:pointer;}
+  .pdf-btn:disabled{opacity:.6;}
+  .preview-wrap{margin-top:16px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#333;padding:10px;display:flex;justify-content:center;}
+  #tplCanvas{width:100%;height:auto;background:#fff;display:block;}
+
+  .print-hint{font-size:10.5px;color:var(--sub);text-align:center;margin-top:8px;line-height:1.5;}
+
+  /* 정식견적서 문서 미리보기 (실제 견적서 양식 재현) */
+  .quote-doc{background:#fff;color:#111;border-radius:10px;padding:22px 18px 26px;font-family:'Malgun Gothic','Apple SD Gothic Neo',var(--sans);}
+  .quote-doc .qd-title{text-align:center;font-size:26px;font-weight:800;letter-spacing:.05em;border:2px solid #111;padding:10px 0;margin-bottom:14px;}
+  .quote-doc .qd-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px;}
+  .quote-doc .qd-company{font-size:12px;line-height:1.6;position:relative;}
+  .quote-doc .qd-company img.qd-logo{height:34px;display:block;margin-bottom:6px;}
+  .quote-doc .qd-company .qd-name{font-weight:800;font-size:13px;}
+  .quote-doc .qd-seal{position:absolute;top:-4px;left:150px;width:62px;opacity:.92;}
+  .quote-doc .qd-contact{font-size:12px;line-height:1.6;text-align:right;white-space:pre-line;}
+  .quote-doc .qd-unit{font-size:10.5px;text-align:right;color:#555;margin-bottom:4px;}
+  table.qd-table{width:100%;border-collapse:collapse;font-size:11px;}
+  table.qd-table th,table.qd-table td{border:1px solid #333;padding:5px 6px;text-align:center;vertical-align:middle;}
+  table.qd-table th{font-weight:700;background:#F4F4F4;}
+  table.qd-table td.qd-left{text-align:left;}
+  table.qd-table tr.qd-main td{font-weight:700;}
+  table.qd-table tr.qd-discount td, table.qd-table tr.qd-final td{font-weight:800;}
+  .quote-doc .qd-notes{font-size:10.5px;line-height:1.7;margin-top:12px;color:#222;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow">DIRECT MARKET · KEEPER CCTV</div>
+  <h1 id="staffTitle">구태진 매니저 문자 템플릿</h1>
+  <div class="rec"><span class="dot"></span>VAT 별도</div>
+</div>
+
+<div class="staff-row">
+  <span class="staff-label">담당자</span>
+  <div class="staff-tabs" id="staffTabs">
+    <button class="staff-tab active" data-staff="구태진" onclick="setStaff('구태진')">구태진</button>
+    <button class="staff-tab" data-staff="김수정" onclick="setStaff('김수정')">김수정</button>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="sop">콜센터견적</div>
+  <div class="tab" data-tab="missed">부재문자</div>
+  <div class="tab" data-tab="internet">인터넷가입</div>
+  <div class="tab" data-tab="promo">한달프로모션</div>
+  <div class="tab" data-tab="visit">현장실사</div>
+  <div class="tab" data-tab="pdf">정식견적서</div>
+</div>
+
+<!-- 콜센터견적 (SOP 표준) -->
+<div class="section active" id="sop">
+  <div class="calc">
+    <div class="calc-row">
+      <div class="calc-label">설치 대수</div>
+      <div class="stepper">
+        <button onclick="changeSopQty(-1)">−</button>
+        <input id="sopQty" type="number" value="1" min="1" max="30" oninput="renderSop()">
+        <button onclick="changeSopQty(1)">+</button>
+      </div>
+    </div>
+    <div class="readout">
+      <div><span class="k">총액 (VAT별도)</span><span class="v" id="sopTotal">2,880,000원</span></div>
+      <div><span class="k">36개월 무이자할부 월</span><span class="v" id="sopMonthly">80,000원</span></div>
+      <div><span class="k">할인율 적용</span><span class="v" id="sopDiscount">없음</span></div>
+      <div><span class="k">1대당 단가</span><span class="v" id="sopUnit">360,000원</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title"><span class="tag">인바운드 콜 · 부가세 포함 표기</span>견적 정리 문자</div>
+      <button class="copy-btn" onclick="copyText('sopText', this)">복사</button>
+    </div>
+    <div class="card-body" id="sopText"></div>
+  </div>
+</div>
+
+<!-- 부재문자 -->
+<div class="section" id="missed">
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title"><span class="tag">홈페이지 문의 · 부재중</span>부재문자양식</div>
+      <button class="copy-btn" onclick="copyText('missedText', this)">복사</button>
+    </div>
+    <div class="card-body" id="missedText"></div>
+  </div>
+</div>
+
+<!-- 인터넷가입 -->
+<div class="section" id="internet">
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title"><span class="tag">빈 틀 · 접수용</span>인터넷가입양식</div>
+      <button class="copy-btn" onclick="copyText('internetText', this)">복사</button>
+    </div>
+    <div class="card-body" id="internetText"></div>
+  </div>
+</div>
+
+<!-- 한달프로모션 -->
+<div class="section" id="promo">
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title"><span class="tag">빈 틀 · 접수용</span>한달프로모션양식</div>
+      <button class="copy-btn" onclick="copyText('promoText', this)">복사</button>
+    </div>
+    <div class="card-body" id="promoText"></div>
+  </div>
+</div>
+
+<!-- 현장실사 -->
+<div class="section" id="visit">
+  <div class="rule-warn" style="margin-bottom:12px;">⚠️ 문자 전에 <b>키퍼 백오피스</b>에서 실사 티켓 먼저 생성하세요.<br><span class="rule-link">admin.keeperplatform.com</span> · 티켓 없이 문자만 보내면 처리되지 않습니다.</div>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title"><span class="tag">빈 틀 · 티켓용</span>현장실사양식</div>
+      <button class="copy-btn" onclick="copyText('visitText', this)">복사</button>
+    </div>
+    <div class="card-body" id="visitText"></div>
+  </div>
+</div>
+
+<div class="note">탭을 눌러 양식을 전환하고, 복사 버튼으로 바로 붙여넣기 하세요.<br>견적문자는 대수 입력 시 금액이 자동 계산됩니다.</div>
+
+<!-- 견적서 PDF -->
+<div class="section" id="pdf">
+  <div class="calc">
+    <div class="calc-row">
+      <div class="calc-label">설치 대수</div>
+      <div class="stepper">
+        <button onclick="changePdfQty(-1)">−</button>
+        <input id="pdfQty" type="number" value="5" min="1" max="30" oninput="renderOfficialReadout()">
+        <button onclick="changePdfQty(1)">+</button>
+      </div>
+    </div>
+    <div class="readout">
+      <div><span class="k">단가 (일시불)</span><span class="v" id="offUnit">360,000원</span></div>
+      <div><span class="k">금액</span><span class="v" id="offAmt">1,800,000원</span></div>
+      <div><span class="k">부가세포함</span><span class="v" id="offAmtVat">1,980,000원</span></div>
+      <div><span class="k">할인율 적용</span><span class="v" id="offDiscount">없음</span></div>
+      <div><span class="k">대량구매 할인액</span><span class="v" id="offDiscountAmt">0원</span></div>
+      <div><span class="k">최종 총 금액</span><span class="v" id="offFinal">1,980,000원</span></div>
+    </div>
+    <button class="pdf-btn" id="pdfBtn" onclick="generateOfficialQuotePNG()">🖼️ 사진(PNG·가로) 다운로드</button>
+    <div class="print-hint">아래 미리보기가 실제 견적서 가로형 사진(PNG)으로 저장됩니다.<br>대수 변경 시 금액·할인이 자동으로 반영됩니다.</div>
+  </div>
+
+  <div class="preview-wrap" style="padding:0;background:#555;">
+    <div class="quote-doc" id="quoteDoc">
+      <div class="qd-title">키퍼 견적서</div>
+      <div class="qd-head">
+        <div class="qd-company">
+          <img class="qd-logo" id="qdLogoImg" src="" alt="keeper">
+          <img class="qd-seal" id="qdSealImg" src="" alt="">
+          <div class="qd-name">한화비전주식회사</div>
+          <div>경기도 성남시 분당구 판교로319-6</div>
+          <div>대표이사&nbsp;&nbsp;김기철</div>
+          <div style="margin-top:6px;">담&nbsp;&nbsp;당&nbsp;:&nbsp;임채형</div>
+          <div>TEL&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;070-7147-6253</div>
+          <div>Mobile&nbsp;:&nbsp;010-4513-2915</div>
+        </div>
+        <div class="qd-contact" id="qdContact">담당자 : 구태진<br>Mobile : 010-2861-3385</div>
+      </div>
+      <div class="qd-unit">[단위 :원]</div>
+      <table class="qd-table">
+        <thead>
+          <tr><th style="width:6%;">번호</th><th style="width:20%;">규 격</th><th style="width:11%;">품 명</th><th style="width:6%;">단위</th><th style="width:8%;">수량</th><th style="width:12%;">단 가</th><th style="width:13%;">금 액</th><th style="width:13%;">부가세포함</th><th>비고</th></tr>
+        </thead>
+        <tbody>
+          <tr class="qd-main"><td>1</td><td class="qd-left">매장용 CCTV</td><td>키퍼 CCTV</td><td>Set</td><td id="qdQty">5</td><td id="qdUnit">360,000</td><td id="qdAmt">1,800,000</td><td id="qdAmtVat">1,980,000</td><td class="qd-left" id="qdMainNote">- CCTV 일시불 구매 가격<br>(최대 36개월 무이자 할부 월 55,000원)</td></tr>
+          <tr><td></td><td class="qd-left">1) 4백만화소 돔/불렛 카메라</td><td>카메라</td><td>EA</td><td id="qdQty2">5</td><td></td><td></td><td></td><td class="qd-left">실내 또는 실외 카메라 선택</td></tr>
+          <tr><td></td><td class="qd-left">2) 녹화기 및 HDD</td><td>NVR</td><td>EA</td><td>1</td><td></td><td></td><td></td><td class="qd-left">NVR (4TB HDD 포함)</td></tr>
+          <tr><td></td><td class="qd-left">3) 문열림 감지 IoT센서</td><td>IoT센서</td><td>EA</td><td>1</td><td></td><td></td><td></td><td class="qd-left">IoT 센서 및 모바일 경비모드</td></tr>
+          <tr><td></td><td class="qd-left">4) 설치비</td><td>설치비</td><td></td><td></td><td></td><td></td><td></td><td class="qd-left"></td></tr>
+          <tr><td></td><td class="qd-left">5) 영상 통합 관리</td><td>영상 관리</td><td></td><td></td><td></td><td></td><td></td><td class="qd-left">"키퍼" Mobile App 활용</td></tr>
+          <tr><td></td><td class="qd-left">6) 한화손해보험 Carrot<br>매장보험 혜택</td><td>매장보험(1년)</td><td></td><td></td><td></td><td></td><td></td><td class="qd-left">매장보험 : 매장 비품 파손 및 사고 보상<br>1년 무상 제공</td></tr>
+          <tr><td></td><td class="qd-left">7) 직원관리 서비스</td><td>직원관리</td><td></td><td></td><td></td><td></td><td></td><td class="qd-left">직원관리 : 전자 근로계약, GPS 출퇴근 관리<br>1개월 무상 제공</td></tr>
+          <tr class="qd-discount" id="qdDiscountRow"><td></td><td class="qd-left">8) 대량 구매 할인</td><td></td><td></td><td></td><td></td><td></td><td id="qdDiscountAmt">0</td><td class="qd-left" id="qdDiscountNote">8대 이상 5%할인, 12대이상 10%할인</td></tr>
+          <tr class="qd-final"><td></td><td class="qd-left">9) 총 금액</td><td></td><td></td><td></td><td></td><td></td><td id="qdFinal">1,980,000</td><td class="qd-left">법인결제 일시불, 삼성롯데현대 36개월 무이자</td></tr>
+        </tbody>
+      </table>
+      <div class="qd-notes">
+        1. 납&emsp;&emsp;기 : 협의 일정에 따름<br>
+        2. 유효기간 : 견적일로부터 1개월.<br>
+        3. 하자보증(하자담보 무상보증) : 3년 무상 A/S<br>
+        4. 견적 포함사항 : 카메라 + 녹화기 + HDD(4주저장용량) + 문열림 감지 IoT센서 + 설치비, 모바일 앱으로 관제<br>
+        5. 구매방식 : 한화비전 "키퍼" 앱으로 구매 진행 (신용카드, 간편결제 등)
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 로고/도장 base64 (실제 키퍼 견적서 양식에서 추출)
+const LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaIAAAB1CAMAAAA7mRV+AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAI6UExURQAAAP8AAP8AAP8AAP9VAP9AAP8zAP9VAP9JAP9AAP9gAP85AP9VAOhGAP9OAP9bAP9LAP9aAP9VAP9JAP9VAP9RAP9ZAP9VAP9SAP9cAP9OAP9VAP9PAP9VAP9aAP9VAPhTAP9TAPlZAP9ZAPlXAP9VAP9bAP9YAP9XAP9aAP9bAP9VAP9aAP9YAP9bAP9aAP9dAP9ZAP9dAP9YAP9bAP9aAP9XAP9bAP9aAP9cAP9YAP9ZAPxZAP9ZAPxYAP9XAP9aAP9cAP9bAP9ZAP9YAPxZAP9cAPxaAP9aAPxbAP9ZAPxaAP9aAPxZAP9cAP9bAPxYAP9ZAP9bAP9aAP9bAP9bAP1cAP1ZAP1aAP9ZAP9bAP1aAP9aAP9aAP1bAP1cAP1bAP1bAP1bAP1ZAP1aAP1bAP1aAP1bAP1bAP1YAP1aAP1bAP1aAP1aAP1cAP1cAP1bAP5aAP5YAP5ZAP5aAP5bAP5cAP5bAP5aAP5aAP5cAP5aAP5bAP9aAP9cAPxZAPxcAPxbAPxaAP5aAP9aAP9bAP1aAP1aAP5cAP1cAP5aAP5bAP1cAP5aAP1aAP1bAP5cAP1ZAP5bAP1aAP5bAP1aAP5cAP5ZAP5bAP1aAP1bAP1bAP5bAP5bAP5aAP5bAP5cAP5cAP5aAP1bAP5bAP5bAP9bAP5bAP1bAP5bAP1aAP5aAP1aAP5bAP5bAP1aAP5cAP1bAP5cAP1bAP5bAP1aAP1bAP5bAP5bAP5cAP1bAP5bAP5bAP9cAMEdecMAAAC9dFJOUwABAgMDBAUGBwgICQkLDQ4RERIVFRYXGBkZGhsdHiIkJSUoKCkqKjEyMzU2Njc4Pj9CQkNDREZGR0hLTVBQUVJSU1RWV1lZW15fX2BgYWFiY2RlZm1wdXZ3eH5/f4CDhYeJjI+QkpSUl5mio6SlpqeprK2ur7C1t7m6vL2+wMDBxMnKy8zMzc7O0dXX2NjZ2tzd3d/g4ePk5OXl5+fo6enq6+zu7u/w8vPz9PT19vf4+Pn5+vr7+/v8/P39/mWycJEAAAAJcEhZcwAAIdUAACHVAQSctJ0AAAr4SURBVHhe7d311zxVHcDxVUGxsMAWu1sRu7u7G7vF7u4OxMIOxEAsEMH/zdnd1+587tx7d2dm9zmOx3n9wvN83p97/S73HPXwDRb/zixm0+JdAmE2Fd4lEGZT4V0CYTYV3iUQZlPhXQJhNhXeJRBmU+FdAmE2Fd4lEGZT4V0CYTYV3iUQZlPhXQJhNhXeJRBmU+FdAmE2Fd4lEGZT4V0CYTYV3iUQZlPhXQJhNhXeJRBmU+FdAmE2Fd4lEGZT4V0CYTYV3iUQZlPhXQLhiC65orn2ih/67kAX/rO57F+X+O5Al68+8cZfTce5xC2X+v5o3BsIR+HKSBnBBZGyg8VAWCy+YZDQBnmqs9EztCNwYyCU2EhpmXvpOQtDnOVozkKNraAa0Pt6t2O5t9s4lOsCoeBjNhIPEzvUiu/b6smpGltFVoLV+Oa+KVpt9ONEja2S+1hpfUdpmKzUPkKRhZSW0nb4is0ernKk7gc2C2wE5WniTquj+1nfxWbucRZa2yfyPZWPUKSntMQrtd0s7/NI67udZjujB8Vh1/rwbp+3u9uHbHdVn8h3WwOeSE5pCWk/+ztZ3c9+lxr0u9PxHSzuZ7/jhWpr/US+aRU/QtG95cSvxUjqw4kdLPbhRIcY9LzT+SprfTiRqjyRr4PSqExNacH7lX4cqnmptX6u5VRCG8EFZd+11M/7nIrO1VrNE53iy6j3E4kpLfiH0tfdnSv6o6W+nuNcJI3hhhIb/TkXvEtpNU/kq0TfJ9JSWiAM8BgnC6600t97nQyUUVyR0we4yslW6Yl8kSpMXZHSUlrrx8IQZzib+YSFIZ7ibEsYxx1dl8pDnO/s1qeE1nfu6YtUzyeSUlrrrsIwDnddRx7G4Zb5OPdwSerF6jA3cXqj8ET+2tHviZSUFghDOd0hDuX0lvFILklpQzm9cb5x65An+ruSeKjYEoZzPiEN5/yG6VhuiZThnCd/oopeTySktJZ5Rl4s7mKQeb6FYPkzDiXyYnEjg8xHLWA61pmuaQkZebF4sEHmLxbWLjDdq88Tmae0QEhpG6ZdaiCktA3TLhXDolvaWSx+YpKz0DJPaRumXerahYZ7FW5zxZZxSguExIO0QOkQt4wTr9ECpUNcMyuwsGHada68YZz4vRYoHeLKEZ/oc8aJb4qBEikpLaVtGUdKSktpa2YZOThN6VB5iGkkpX4nJrSVX5jtVfgIrtgwTWmBECldl8kJDcNI6fqTnNBWjLrUlJa6nrhmGCld75ET2tLxnsgwpUVKIOT0hIRhIOT0hLRi1CF2qSltzSwQcnpCWvqNUdHV1zuPX3697z/TLKVFSnCOUmAjOltaMQvepBTYiM6TloxSWk5PSCtGwZVKgY3ol1Kj/kQ3trH26sI90spzzVJipARCydesRNKKUSCUPM9KJC2ZJKQSG9HLpCWjQCiyEimNi026LtdbQiCsGKW06DZSSyizEylLVzdqCWV2ImXJJFKKrCSkxt1MWq9TiuxESmPza7o6Cv/oXwmEJZOUlpACocxOdGepYRIIZXail0gNk0gpsxMpDYNAKCv8M8ufSrUnerIaSYHQMEg9S0xorYuFCluR0jAIhApLkdIwCIQKS5HSMAiECkuR0v1VlhtiQgqExeJWBikxpbXMa2xFSsOgZV5jK1IaBoFQYyt4kVJoDxAqbEVK5Ym0lBYIxf+A2gcUD+GmhsEh3NQwaO37pcbWImVxpu8P4aryp3yslhIDofx3SuvY+f/xe3LVYvE2g0O4qmHQMq+yFinlvyMDuap8mdQhBtXQ+JHYoR7kge46ymVvcFfhNvOq+9kLlKP8yL7oruJlUocYVEND61IPsv3Zfd8fxl2F28zr7AXCcX9kvo2ULjWozRvrlJMP467jXpbfZl5nLxBO/GMqXWpQGTdOXaUC/TDuOu5l+W3mdfYC4cQ/ptKlBsvpr3ydyH+h0YaFw7jruJflt5nX2QuEE/+YSpcalKdLqwMl+mHcddzL8tvM6+wFwkl/zC8oXXJQHK7cbn0kpx/GXce9LL/NvM5eIJz0xxQycrDjh+JMRj6Mu457WX6beZ29QDjpjylk5GBxni8KHOpSD+Ou416W32ZeZy8QTvpjChk52PUjqfwElnoYdx33svw286rC7wlUTvpjChm5r2s4lhIDYQw3BMIormiZV1mLlP/Wx5R7cyz1W7EljPEOV7SEUVwRCDW2ImXxc9+3hDHcEAgZuT/nUlrLfBRXtMxHcUUgVLzCVnAD6bg/MjcEQkbu72cOJrSW+SiuaJmP4orgtUqZpUhpGLTMx3BDIGTkARxMSIEwhhsCYQw3RErRre1EUsMgEEZwQSBk5CGcjJRAGMMNgTCGG6K/SSVWElLDIBBGcEEgZORBHA2epATKCNd1Q6CM4IKEVGAhcbrWuL5RoAznfCBk5EHe4mygBEKZnUhZMgmEMjuR0jBIaZk/6AltxSg4RSmyEylDPqQ8jLOBECklH7QSSUsmkVLycCuR1DDoEDs+rabEFaNIKbGRkEpRyMh1V/PXhMOt04VIKrAQKWtmkVJgIVKWTLrUhNQhYhgpudJvtZAaBoGQkasqG063zBNSRk5Ia2YJKSMnpCWTnN4y71IxTEhdZ8gJrWEQCBm5praS/QbDbwuJ9rfBBV8SEzcU1x5lmni0mHizmHimuGRUYmOl+N8VS/rGI4xTYkJKaUsmgZCRKy6o7qxCZN4hBkKHuGHaIQZCh7hiVHHhbZuVl/umaH1Ly7jjA+rWG4UOdckkEDJyxXrnZr5LrFOr+oc46ivlXyWbX3Zt84y+cpFZ1x30FbOx3NI6Vcg8zUIj/9X56CtGgZCRy+yUl7Qt41Fc0TIfxRVrZmO5JRBGccWKUSBk5KL2Zx4MElLLfAQXRMoILsBwJJckpBFcsGYWCBm5yMqSSULaOtt8sLNcEN1CG+wFLsB0HHekKr9teT/nMQyEjFxiY+UJZglty3io8k/lioM5vmE6yhPd0VH7H9Q9vuw4poGQkQssYJjI/tBw84Ec7lIHcnjLeBRXZOSBHN4wDYSMnHu2hQ3jhNQyH8TRnD6Ioy3zMdxQYGEQR7eMAyEj5/SWeUJqmQ/gYImNARwMhBFcUGRlAAdb5oGQkTNy8GElobXMe3OszE5vjkVK0PNW5yss9fVxxwIlEDJyl5qQEq/XWkI/T3eoxlo/73QooQW9br3M8ariz1vUOJOQAiEjd5R/N7GYkIL6vysi48QO1T/TLOdEhxgUhx3XXB/eyWoPDqS0QMjIHWKXmpAiZZ+LrO9meZ/av9hGDpbT7/m6YnVyL8v72O5SAyEjp7TMn/WEFpV+9ihjd6/qPxWL7Ob0oDbfqv7LDTIO7PIRqxk9EDJyov5jtJC4vZY4R6yy18sdnamyV2IjEGp/f+8r9+NQzausFdgIhIyckEpsJKQuteQzVvpzsORbVsosBULDIFIGcLDERpmdQMjIkVLU76fJN/TUW8WhHE99UqyyFwhrZis7/lT33ZxPaVXWAiEjB0KFpcSOP/Brsbhp+LONP2s22g2+7qbGV812sxwIx7b9NwJdfn+T3WwHwv8dHz8QZlPhXQJhNhXeJRBmU+FdAmE2Fd4lEGZT4V0CYTYV3iUQZlPhXQJhNhXeJRBmU+FdAmE2Fd4lEGZT4V0CYTYV3iUQZlPhXQJhNhXeJRBmU+FdAmE2Fd4lEGZT4V0CYTYV3iUQZlPhXQJhNhXeJRBmU+FdAmE2Fd4lEGZT4V0CYTYV3iUQ/kcsFv8BojqTmZ58UvMAAAAASUVORK5CYII=";
+const SEAL_B64 = "data:image/png;base64,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";
+
+const tabs = document.querySelectorAll('.tab');
+const sections = document.querySelectorAll('.section');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    sections.forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ===== 담당자(직원) 관리 =====
+const STAFF = {
+  '구태진': { name: '구태진', mobile: '010-2861-3385' },
+  '김수정': { name: '김수정', mobile: '010-2765-9766' }
+};
+let currentStaff = '구태진';
+
+function setStaff(name) {
+  currentStaff = name;
+  document.querySelectorAll('.staff-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.staff === name);
+  });
+  document.getElementById('staffTitle').innerText = `${name} 매니저 문자 템플릿`;
+  renderSop();
+  renderMissed();
+  renderVisit();
+  renderOfficialReadout();
+}
+
+function copyText(id, btn) {
+  const text = document.getElementById(id).innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.innerText;
+    btn.innerText = '복사됨!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerText = original; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// ===== SOP 콜센터견적 계산기 =====
+function changeSopQty(delta) {
+  const input = document.getElementById('sopQty');
+  let v = parseInt(input.value || '1', 10) + delta;
+  v = Math.max(1, Math.min(30, v));
+  input.value = v;
+  renderSop();
+}
+function renderSop() {
+  const qty = parseInt(document.getElementById('sopQty').value || '1', 10);
+
+  let unit = 360000;
+  let discountLabel = '없음';
+  let discountSuffix = '';
+  if (qty >= 12) { unit = 324000; discountLabel = '12대 이상 10%'; discountSuffix = ', 10%추가할인'; }
+  else if (qty >= 8) { unit = 342000; discountLabel = '8대 이상 5%'; discountSuffix = ', 5%추가할인'; }
+
+  const total = unit * qty;
+  const monthly = Math.round(total / 36 / 1000) * 1000;
+
+  document.getElementById('sopMonthly').innerText = monthly.toLocaleString() + '원';
+  document.getElementById('sopTotal').innerText = total.toLocaleString() + '원';
+  document.getElementById('sopDiscount').innerText = discountLabel;
+  document.getElementById('sopUnit').innerText = unit.toLocaleString() + '원';
+
+  let msg = `안녕하세요, 한화비전 키퍼 CCTV 담당자 ${STAFF[currentStaff].name}입니다.\n\n`;
+  msg += `📹 한화비전 CCTV (소유형)\n`;
+  msg += `✅ 실내 설치비 무료\n`;
+  msg += `✅ 6TB 녹화기 포함 (30일 내외 저장)\n`;
+  msg += `✅ 3년간 AS 무료\n`;
+  msg += `✅ QHD 400만화소 (야간 선명)\n`;
+  msg += `✅ 위약금 없음\n\n`;
+  msg += `[견적]\n`;
+  msg += `CCTV${qty}대 / 총액 ${total.toLocaleString()}원 (VAT별도${discountSuffix})\n`;
+  msg += `36개월 무이자할부 시 월 ${monthly.toLocaleString()}원\n\n`;
+  msg += `화질비교영상 https://www.keeper-direct.ceo/landing/yongwon\n\n`;
+  msg += `※ 실외 배선 상황에 따라\n`;
+  msg += `※ 설치비 추가 발생 가능\n`;
+  msg += `※ 설치 기사 방문 시 확인\n\n`;
+  msg += `키퍼 앱: https://keeper.airbridge.io\n`;
+  msg += `위 링크를 통해 CCTV 견적확인 및 주문결제가 가능합니다.\n`;
+  msg += `1. keeper 어플 다운로드\n`;
+  msg += `2. 회원가입\n`;
+  msg += `3. 제품구매\n`;
+  msg += `4. 실내,실외 CCTV 댓수선택\n`;
+  msg += `5. 주문하기\n\n`;
+  msg += `네이버스토어 주문링크 : https://naver.me/FVFUvuJR ( 네이버포인트 적립가능 / 최대 6개월무이자할부)\n\n`;
+  msg += `궁금하신 사항이 있으시다면 제게 연락 부탁드리겠습니다.\n`;
+  msg += `한화비전 키퍼 매니저 ${STAFF[currentStaff].name} ${STAFF[currentStaff].mobile}`;
+
+  document.getElementById('sopText').innerText = msg;
+}
+
+// ===== 부재문자 =====
+function renderMissed() {
+  document.getElementById('missedText').innerText =
+  `안녕하세요 한화비전CCTV 매니저 ${STAFF[currentStaff].name}입니다.\n` +
+  `홈페이지에 견적비교문의주셔서 연락드렸습니다!\n` +
+  `오후6시 이후에도 통화가 가능하오니 통화 편하신 시간대에 연락부탁드리겠습니다!`;
+}
+
+// ===== 인터넷가입 =====
+document.getElementById('internetText').innerText =
+`[인터넷 가입 접수]\n\n` +
+`고객명 : \n` +
+`연락처 : \n` +
+`주소 : \n` +
+`통신사 : \n` +
+`상품 : \n` +
+`사은품 : \n`;
+
+// ===== 한달프로모션 =====
+document.getElementById('promoText').innerText =
+`[한달 프로모션 접수]\n\n` +
+`0.고객명/연락처 : \n` +
+`1.키퍼ID: \n` +
+`2.주소/매장정보: \n` +
+`3.설치대수: 실내 카메라 x대 , 실외카메라 x대\n` +
+`4.설치희망일: \n` +
+`5. 기존설치여부: \n` +
+`6. 설치층수: \n` +
+`7. 층고높이(2.5m미만여부): \n` +
+`8. 인테리어 공사 완료여부: \n` +
+`9. 인터넷 설치여부: \n` +
+`10. 출입문 개수: \n`;
+
+// ===== 현장실사 =====
+function renderVisit() {
+  document.getElementById('visitText').innerText =
+  `[현장실사 안내]\n\n` +
+  `⚠️ 키퍼 백오피스에서 실사 티켓 생성 후 발송하세요.\n\n` +
+  `요약: \n` +
+  `문의 매장: \n` +
+  `고객명: \n` +
+  `연락처: \n` +
+  `파일 첨부: -\n` +
+  `상태: 확인 전\n` +
+  `티켓 유형: 현장 실사\n` +
+  `보고자: ${STAFF[currentStaff].name}\n`;
+}
+
+// ===== 정식견적서 계산기 =====
+document.getElementById('qdLogoImg').src = LOGO_B64;
+document.getElementById('qdSealImg').src = SEAL_B64;
+
+function changePdfQty(delta) {
+  const input = document.getElementById('pdfQty');
+  let v = parseInt(input.value || '1', 10) + delta;
+  v = Math.max(1, Math.min(30, v));
+  input.value = v;
+  renderOfficialReadout();
+}
+function renderOfficialReadout() {
+  const qty = parseInt(document.getElementById('pdfQty').value || '1', 10);
+  const unit = 360000;
+  const amt = unit * qty;
+  const amtVat = Math.round(amt * 1.1);
+
+  let discountRate = 0, discountLabel = '없음';
+  if (qty >= 12) { discountRate = 0.10; discountLabel = '12대 이상 10%'; }
+  else if (qty >= 8) { discountRate = 0.05; discountLabel = '8대 이상 5%'; }
+
+  const discountAmt = Math.round(amtVat * discountRate);
+  const finalTotal = amtVat - discountAmt;
+
+  document.getElementById('offUnit').innerText = unit.toLocaleString() + '원';
+  document.getElementById('offAmt').innerText = amt.toLocaleString() + '원';
+  document.getElementById('offAmtVat').innerText = amtVat.toLocaleString() + '원';
+  document.getElementById('offDiscount').innerText = discountLabel;
+  document.getElementById('offDiscountAmt').innerText = discountAmt.toLocaleString() + '원';
+  document.getElementById('offFinal').innerText = finalTotal.toLocaleString() + '원';
+
+  document.getElementById('qdQty').innerText = qty;
+  document.getElementById('qdQty2').innerText = qty;
+  document.getElementById('qdUnit').innerText = unit.toLocaleString();
+  document.getElementById('qdAmt').innerText = amt.toLocaleString();
+  document.getElementById('qdAmtVat').innerText = amtVat.toLocaleString();
+  document.getElementById('qdDiscountAmt').innerText = discountAmt > 0 ? discountAmt.toLocaleString() : '0';
+  document.getElementById('qdFinal').innerText = finalTotal.toLocaleString();
+
+  const monthly = Math.round(finalTotal / 36 / 1000) * 1000;
+  document.getElementById('qdMainNote').innerHTML = `- CCTV 일시불 구매 가격<br>(최대 36개월 무이자 할부 월 ${monthly.toLocaleString()}원)`;
+  document.getElementById('qdContact').innerHTML = `담당자 : ${STAFF[currentStaff].name}<br>Mobile : ${STAFF[currentStaff].mobile}`;
+
+  const discountRow = document.getElementById('qdDiscountRow');
+  discountRow.style.opacity = discountAmt > 0 ? '1' : '.4';
+}
+
+function generateOfficialQuotePNG() {
+  if (!window.html2canvas) {
+    alert('이미지 생성 라이브러리 로드에 실패했습니다. 인터넷 연결을 확인해주세요.');
+    return;
+  }
+  const btn = document.getElementById('pdfBtn');
+  const original = btn.innerText;
+  btn.innerText = '생성 중...';
+  btn.disabled = true;
+
+  const CAPTURE_WIDTH = 1300; // 가로형 비율을 위해 캡처 시에만 이 폭으로 넓힘
+
+  // 미리보기 액자(overflow:hidden)의 영향을 받지 않도록, 화면 밖에 문서를 통째로 복제해서 그 사본을 찍는다
+  const source = document.getElementById('quoteDoc');
+  const stage = document.createElement('div');
+  stage.style.position = 'fixed';
+  stage.style.top = '0';
+  stage.style.left = '-99999px';
+  stage.style.width = CAPTURE_WIDTH + 'px';
+  stage.style.background = '#ffffff';
+  stage.appendChild(source.cloneNode(true));
+  document.body.appendChild(stage);
+
+  html2canvas(stage, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    width: CAPTURE_WIDTH,
+    windowWidth: CAPTURE_WIDTH
+  }).then(canvas => {
+    document.body.removeChild(stage);
+    const imgData = canvas.toDataURL('image/png');
+    const qty = document.getElementById('pdfQty').value || '1';
+    const link = document.createElement('a');
+    link.href = imgData;
+    link.download = `키퍼_CCTV_견적서_${qty}대.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    btn.innerText = original;
+    btn.disabled = false;
+  }).catch(err => {
+    if (stage.parentNode) document.body.removeChild(stage);
+    alert('이미지 생성 중 오류가 발생했습니다: ' + err.message);
+    btn.innerText = original;
+    btn.disabled = false;
+  });
+}
+
+// 초기 렌더
+renderSop();
+renderMissed();
+renderVisit();
+renderOfficialReadout();
+</script>
+</body>
+</html>
