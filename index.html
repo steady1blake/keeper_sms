@@ -239,7 +239,7 @@
         <tbody>
           <tr class="qd-main"><td>1</td><td class="qd-left">매장용 CCTV</td><td>키퍼 CCTV</td><td>Set</td><td id="qdQty">5</td><td id="qdUnit">360,000</td><td id="qdAmt">1,800,000</td><td id="qdAmtVat">1,980,000</td><td class="qd-left" id="qdMainNote">- CCTV 일시불 구매 가격<br>(최대 36개월 무이자 할부 월 55,000원)</td></tr>
           <tr><td></td><td class="qd-left">1) 4백만화소 돔/불렛 카메라</td><td>카메라</td><td>EA</td><td id="qdQty2">5</td><td></td><td></td><td></td><td class="qd-left">실내 또는 실외 카메라 선택</td></tr>
-          <tr><td></td><td class="qd-left">2) 녹화기 및 HDD</td><td>NVR</td><td>EA</td><td>1</td><td></td><td></td><td></td><td class="qd-left">NVR (4TB HDD 포함)</td></tr>
+          <tr><td></td><td class="qd-left">2) 녹화기 및 HDD</td><td>NVR</td><td>EA</td><td>1</td><td></td><td></td><td></td><td class="qd-left" id="qdNvrNote">NVR (4TB HDD 포함)</td></tr>
           <tr><td></td><td class="qd-left">3) 문열림 감지 IoT센서</td><td>IoT센서</td><td>EA</td><td>1</td><td></td><td></td><td></td><td class="qd-left">IoT 센서 및 모바일 경비모드</td></tr>
           <tr><td></td><td class="qd-left">4) 설치비</td><td>설치비</td><td></td><td></td><td></td><td></td><td></td><td class="qd-left"></td></tr>
           <tr><td></td><td class="qd-left">5) 영상 통합 관리</td><td>영상 관리</td><td></td><td></td><td></td><td></td><td></td><td class="qd-left">"키퍼" Mobile App 활용</td></tr>
@@ -305,6 +305,13 @@ function copyText(id, btn) {
   });
 }
 
+function getNvrTier(qty) {
+  if (qty <= 4) return { channel: 4, tb: 4 };
+  if (qty <= 8) return { channel: 8, tb: 6 };
+  // 17대 이상은 예외 케이스로 두고, 16채널 녹화기 기준 용량으로 안내
+  return { channel: 16, tb: 10 };
+}
+
 // ===== SOP 콜센터견적 계산기 =====
 function changeSopQty(delta) {
   const input = document.getElementById('sopQty');
@@ -333,7 +340,8 @@ function renderSop() {
   let msg = `안녕하세요, 한화비전 키퍼 CCTV 담당자 ${STAFF[currentStaff].name}입니다.\n\n`;
   msg += `📹 한화비전 CCTV (소유형)\n`;
   msg += `✅ 실내 설치비 무료\n`;
-  msg += `✅ 6TB 녹화기 포함 (30일 내외 저장)\n`;
+  const nvr = getNvrTier(qty);
+  msg += `✅ ${nvr.channel}채널 / ${nvr.tb}TB 녹화기 포함 (30일 내외 저장)\n`;
   msg += `✅ 3년간 AS 무료\n`;
   msg += `✅ QHD 400만화소 (야간 선명)\n`;
   msg += `✅ 위약금 없음\n\n`;
@@ -444,6 +452,9 @@ function renderOfficialReadout() {
   document.getElementById('qdAmtVat').innerText = amtVat.toLocaleString();
   document.getElementById('qdDiscountAmt').innerText = discountAmt > 0 ? discountAmt.toLocaleString() : '0';
   document.getElementById('qdFinal').innerText = finalTotal.toLocaleString();
+
+  const nvr = getNvrTier(qty);
+  document.getElementById('qdNvrNote').innerText = `NVR (${nvr.channel}채널 / ${nvr.tb}TB HDD 포함)`;
 
   const monthly = Math.round(finalTotal / 36 / 1000) * 1000;
   document.getElementById('qdMainNote').innerHTML = `- CCTV 일시불 구매 가격<br>(최대 36개월 무이자 할부 월 ${monthly.toLocaleString()}원)`;
